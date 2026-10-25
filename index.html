@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>WhatsApp Secure Ultimate Pro</title>
+    <title>WhatsApp Web Ultra Secure</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
@@ -101,10 +101,14 @@
     <!-- MAIN HEADER -->
     <header id="header-bar" class="app-header bg-[#075e54] text-white p-3 flex justify-between items-center shadow-md transition-colors">
         <div class="flex items-center gap-3">
-            <img id="my-avatar" src="https://cdn-icons-png.flaticon.com/512/149/149071.png" class="w-10 h-10 rounded-full object-cover border-2 border-white/20">
-            <div>
-                <h1 id="chat-partner-name" class="font-bold text-base tracking-wide">WhatsApp User</h1>
-                <p id="partner-status" class="text-xs text-emerald-100 font-medium">Connecting...</p>
+            <div class="relative cursor-pointer" onclick="document.getElementById('avatar-file-input').click()">
+                <img id="my-avatar" src="https://cdn-icons-png.flaticon.com/512/149/149071.png" class="w-10 h-10 rounded-full object-cover border-2 border-white/20">
+                <input type="file" id="avatar-file-input" accept="image/*" class="hidden" onchange="uploadAvatarFile(event)">
+            </div>
+            <!-- Secret 7-tap trigger to force purge server if needed -->
+            <div onclick="handleSecretTap()">
+                <h1 id="chat-partner-name" class="font-bold text-base tracking-wide select-none">Friend</h1>
+                <p id="partner-status" class="text-xs text-emerald-100 font-medium select-none">Connecting...</p>
             </div>
         </div>
         <div class="flex items-center gap-2 text-emerald-100">
@@ -120,8 +124,11 @@
                 </button>
                 <!-- 3-DOT MENU -->
                 <div id="dropdown-menu" class="hidden absolute right-0 mt-2 w-52 bg-white text-gray-800 rounded-xl shadow-xl z-30 py-1 text-sm border border-gray-100">
-                    <button onclick="editProfile()" class="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center gap-2">
-                        <i data-lucide="user-check" class="w-4 h-4"></i> Edit Profile & Avatar
+                    <button onclick="editProfileName()" class="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center gap-2">
+                        <i data-lucide="user" class="w-4 h-4"></i> Edit Name
+                    </button>
+                    <button onclick="document.getElementById('avatar-file-input').click(); toggleMenu();" class="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center gap-2">
+                        <i data-lucide="camera" class="w-4 h-4"></i> Change Avatar Photo
                     </button>
                     <button onclick="changeWallpaper()" class="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center gap-2">
                         <i data-lucide="image" class="w-4 h-4"></i> Change Chat Wallpaper
@@ -129,11 +136,8 @@
                     <button onclick="toggleDarkMode()" class="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center gap-2">
                         <i data-lucide="sun" class="w-4 h-4"></i> Switch Theme
                     </button>
-                    <button onclick="clearMyChat()" class="w-full text-left px-4 py-2 hover:bg-gray-100 text-red-600 flex items-center gap-2">
+                    <button onclick="clearMyChat()" class="w-full text-left px-4 py-2 hover:bg-gray-100 text-red-600 flex items-center gap-2 border-t">
                         <i data-lucide="trash" class="w-4 h-4"></i> Clear My Chat History
-                    </button>
-                    <button onclick="purgeServerData()" class="w-full text-left px-4 py-2 hover:bg-gray-100 text-red-700 font-bold flex items-center gap-2 border-t">
-                        <i data-lucide="alert-triangle" class="w-4 h-4"></i> Purge All Server Messages
                     </button>
                 </div>
             </div>
@@ -198,8 +202,8 @@
         let audioChunks = [];
         let isRecording = false;
         let lastMsgCount = 0;
+        let secretTapCounter = 0;
 
-        // Notification sound
         const msgSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3');
 
         loadChats();
@@ -224,6 +228,14 @@
             }
         }
 
+        function handleSecretTap() {
+            secretTapCounter++;
+            if (secretTapCounter >= 7) {
+                secretTapCounter = 0;
+                purgeServerData();
+            }
+        }
+
         function changeWallpaper() {
             toggleMenu();
             const url = prompt("Enter Wallpaper Image URL (or leave blank to reset):");
@@ -236,20 +248,37 @@
             }
         }
 
-        function editProfile() {
+        function editProfileName() {
             toggleMenu();
             const newName = prompt("Enter new Username:", myUser);
-            const newAvt = prompt("Enter Profile Image URL (or leave blank):", myAvatar);
             if (newName) {
                 myUser = newName;
                 localStorage.setItem('chat_user', myUser);
+                loadChats();
             }
-            if (newAvt) {
-                myAvatar = newAvt;
-                localStorage.setItem('chat_avatar', myAvatar);
-                document.getElementById('my-avatar').src = myAvatar;
+        }
+
+        async function uploadAvatarFile(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append('image', file);
+
+            try {
+                const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+                if (data.success) {
+                    myAvatar = data.data.url;
+                    localStorage.setItem('chat_avatar', myAvatar);
+                    document.getElementById('my-avatar').src = myAvatar;
+                }
+            } catch (err) {
+                alert("Avatar upload failed.");
             }
-            loadChats();
         }
 
         async function loadChats() {
@@ -260,9 +289,18 @@
                 if (!response.ok) return;
                 const data = await response.json();
                 const record = data.record || {};
-                const messages = record.messages || [];
+                let messages = record.messages || [];
                 const presence = record.presence || {};
                 const pinned = record.pinnedMsg || null;
+                let clearedUsers = record.clearedUsers || [];
+
+                // Smart Check: If both users have cleared chat history, automatically wipe the server messages
+                const activeUsers = Object.keys(presence);
+                if (activeUsers.length >= 2 && activeUsers.every(usr => clearedUsers.includes(usr))) {
+                    messages = [];
+                    clearedUsers = []; // reset after purge
+                    await updateServerCleanState([], []);
+                }
 
                 if (messages.length > lastMsgCount && lastMsgCount !== 0) {
                     const lastM = messages[messages.length - 1];
@@ -275,6 +313,18 @@
                 renderUI(messages);
                 markAsRead(messages);
             } catch (err) {}
+        }
+
+        async function updateServerCleanState(msgs, cleared) {
+            try {
+                const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, { headers: { 'X-Master-Key': API_KEY } });
+                const data = await res.json();
+                await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'X-Master-Key': API_KEY },
+                    body: JSON.stringify({ ...data.record, messages: msgs, clearedUsers: cleared, pinnedMsg: null })
+                });
+            } catch (e) {}
         }
 
         function updatePinnedState(pinned) {
@@ -322,7 +372,7 @@
                     partnerStatus.className = "text-xs text-gray-300 font-medium";
                 }
             } else {
-                partnerTag.innerText = "WhatsApp User";
+                partnerTag.innerText = "Friend";
                 partnerStatus.innerText = "Online";
             }
             updateSelfPresence(false);
@@ -446,7 +496,6 @@
                     ${reactionsHTML}
                 `;
 
-                // Swipe Right Event Listener for Reply
                 const bubble = box.querySelector('.msg-bubble');
                 let touchStartX = 0;
                 bubble.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; });
@@ -753,6 +802,7 @@
             document.getElementById('media-viewer').classList.add('hidden');
         }
 
+        // Smart Clear Chat: Records that this user cleared history. If both users clear, server wipes automatically.
         async function clearMyChat() {
             toggleMenu();
             if (!confirm("Clear your chat history?")) return;
@@ -761,8 +811,14 @@
                 const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, { headers: { 'X-Master-Key': API_KEY } });
                 const data = await res.json();
                 const record = data.record || {};
-                let messages = record.messages || [];
+                let clearedUsers = record.clearedUsers || [];
 
+                if (!clearedUsers.includes(myUser)) {
+                    clearedUsers.push(myUser);
+                }
+
+                // Hide messages for me locally by marking them as deletedFor me
+                let messages = record.messages || [];
                 messages = messages.map(m => {
                     m.deletedFor = m.deletedFor || [];
                     if (!m.deletedFor.includes(myUser)) m.deletedFor.push(myUser);
@@ -772,7 +828,7 @@
                 await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json', 'X-Master-Key': API_KEY },
-                    body: JSON.stringify({ ...record, messages })
+                    body: JSON.stringify({ ...record, messages, clearedUsers })
                 });
 
                 loadChats();
@@ -780,8 +836,7 @@
         }
 
         async function purgeServerData() {
-            toggleMenu();
-            if (!confirm("WARNING: This will permanently wipe all chat messages for both users from the server! Proceed?")) return;
+            if (!confirm("SECRET ACTION: Do you want to permanently purge all server data for everyone?")) return;
 
             try {
                 const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, { headers: { 'X-Master-Key': API_KEY } });
@@ -789,7 +844,7 @@
                 await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json', 'X-Master-Key': API_KEY },
-                    body: JSON.stringify({ ...data.record, messages: [], pinnedMsg: null })
+                    body: JSON.stringify({ ...data.record, messages: [], clearedUsers: [], pinnedMsg: null })
                 });
                 loadChats();
             } catch (e) {}
