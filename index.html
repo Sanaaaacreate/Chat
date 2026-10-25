@@ -3,15 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>WhatsApp Web Ultra</title>
+    <title>WhatsApp Secure Ultimate Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         .dark-mode {
-            background-color: #0d1418 !important;
+            background-color: #0b141a !important;
             color: #e9edef !important;
         }
-        .dark-mode .app-header {
+        .dark-mode .app-header, .dark-mode .footer-bar {
             background-color: #1f2c34 !important;
             color: #e9edef !important;
         }
@@ -26,36 +26,24 @@
             background-color: #202c33 !important;
             color: #e9edef !important;
         }
-        .dark-mode .footer-bar {
-            background-color: #1f2c34 !important;
-        }
         .dark-mode .input-box {
             background-color: #2a3942 !important;
             color: #ffffff !important;
             border-color: #3b4a54 !important;
         }
-        ::-webkit-scrollbar { width: 5px; }
-        ::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.2); border-radius: 10px; }
-        .touch-none { touch-action: none; }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); border-radius: 10px; }
+        .msg-bubble { touch-action: pan-y; transition: transform 0.15s ease-out; }
     </style>
 </head>
 <body class="bg-gray-200 h-screen flex flex-col font-sans antialiased selection:bg-emerald-500 selection:text-white">
 
-    <!-- PIN LOCK OVERLAY -->
-    <div id="pin-lock-screen" class="hidden fixed inset-0 z-50 bg-slate-900 text-white flex flex-col items-center justify-center p-4">
-        <i data-lucide="lock" class="w-12 h-12 mb-4 text-emerald-400"></i>
-        <h2 class="text-xl font-bold mb-2">Chat Locked</h2>
-        <p class="text-xs text-gray-400 mb-4">Enter 4-digit PIN to access</p>
-        <input type="password" id="pin-input" maxlength="4" class="bg-slate-800 border border-slate-700 text-center text-2xl tracking-widest rounded-lg px-4 py-2 w-36 mb-4 focus:outline-none focus:ring-2 focus:ring-emerald-500">
-        <button onclick="unlockApp()" class="bg-emerald-600 px-6 py-2 rounded-lg font-bold hover:bg-emerald-500">Unlock</button>
-    </div>
-
-    <!-- MEDIA FULLSCREEN ZOOM VIEWER -->
-    <div id="media-viewer" class="hidden fixed inset-0 z-40 bg-black/95 flex flex-col items-center justify-between p-4 backdrop-blur-md">
+    <!-- MEDIA VIEWER MODAL -->
+    <div id="media-viewer" class="hidden fixed inset-0 z-50 bg-black/95 flex flex-col items-center justify-between p-4 backdrop-blur-md">
         <div class="w-full flex justify-between items-center text-white px-2">
-            <span id="viewer-title" class="text-sm font-medium">Media View</span>
+            <span id="viewer-title" class="text-sm font-medium">Media Preview</span>
             <div class="flex items-center gap-4">
-                <a id="viewer-download" download="media_file" class="p-2 hover:bg-white/20 rounded-full text-white" title="Download">
+                <a id="viewer-download" target="_blank" download class="p-2 hover:bg-white/20 rounded-full text-white" title="Download">
                     <i data-lucide="download" class="w-6 h-6"></i>
                 </a>
                 <button onclick="closeMediaViewer()" class="p-2 hover:bg-white/20 rounded-full text-white">
@@ -64,158 +52,158 @@
             </div>
         </div>
         <div class="flex-1 flex items-center justify-center w-full overflow-hidden my-2">
-            <img id="viewer-img" class="hidden max-h-full max-w-full object-contain transition-transform duration-200 cursor-grab active:cursor-grabbing" alt="Enlarged media">
+            <img id="viewer-img" class="hidden max-h-full max-w-full object-contain" alt="Preview">
             <video id="viewer-video" controls class="hidden max-h-full max-w-full object-contain"></video>
         </div>
-        <div class="text-xs text-gray-400">Click & Drag to View</div>
     </div>
 
-    <!-- MAIN APP HEADER -->
-    <header id="header-bar" class="app-header bg-[#075e54] text-white p-3 flex justify-between items-center shadow-md transition-colors duration-300">
+    <!-- FLOATING REACTION POPUP -->
+    <div id="reaction-bar" class="hidden fixed z-50 bg-white dark:bg-slate-800 shadow-2xl rounded-full px-3 py-1.5 flex items-center gap-2 border border-gray-200 animate-bounce">
+        <button onclick="applyReaction('❤️')" class="text-xl hover:scale-125 transition">❤️</button>
+        <button onclick="applyReaction('😂')" class="text-xl hover:scale-125 transition">😂</button>
+        <button onclick="applyReaction('😮')" class="text-xl hover:scale-125 transition">😮</button>
+        <button onclick="applyReaction('😢')" class="text-xl hover:scale-125 transition">😢</button>
+        <button onclick="applyReaction('🙏')" class="text-xl hover:scale-125 transition">🙏</button>
+        <button onclick="applyReaction('👍')" class="text-xl hover:scale-125 transition">👍</button>
+        <button onclick="customReactionPrompt()" class="text-sm font-bold bg-gray-200 dark:bg-slate-700 px-2 py-1 rounded-full text-gray-700 dark:text-gray-200">+</button>
+    </div>
+
+    <!-- MULTI-SELECT & ACTION BAR -->
+    <div id="selection-bar" class="hidden bg-[#00a884] text-white p-3 flex justify-between items-center z-40">
         <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-full bg-emerald-800 flex items-center justify-center font-bold relative">
-                <i data-lucide="user" class="w-5 h-5"></i>
-                <div id="online-indicator" class="w-3 h-3 bg-gray-400 border-2 border-white rounded-full absolute bottom-0 right-0"></div>
-            </div>
+            <button onclick="cancelSelection()"><i data-lucide="x" class="w-6 h-6"></i></button>
+            <span id="select-count" class="font-bold text-base">0 Selected</span>
+        </div>
+        <div class="flex items-center gap-4">
+            <button onclick="copySelectedText()" title="Copy Text"><i data-lucide="copy" class="w-5 h-5"></i></button>
+            <button onclick="pinSelectedMessage()" title="Pin Message"><i data-lucide="pin" class="w-5 h-5"></i></button>
+            <button onclick="deleteSelected('me')" title="Delete for Me"><i data-lucide="trash-2" class="w-5 h-5"></i></button>
+            <button onclick="deleteSelected('everyone')" title="Delete for Everyone"><i data-lucide="users" class="w-5 h-5"></i></button>
+        </div>
+    </div>
+
+    <!-- SEARCH BAR OVERLAY -->
+    <div id="search-bar" class="hidden bg-[#075e54] text-white p-2.5 flex items-center gap-2 shadow-md z-40">
+        <i data-lucide="search" class="w-5 h-5 ml-2 text-emerald-200"></i>
+        <input type="text" id="search-input" oninput="filterMessages()" placeholder="Search in chat..." class="flex-1 bg-transparent text-white placeholder-emerald-200 focus:outline-none text-sm px-2">
+        <button onclick="toggleSearch()" class="p-1 hover:bg-white/10 rounded-full"><i data-lucide="x" class="w-5 h-5"></i></button>
+    </div>
+
+    <!-- PINNED MESSAGE BANNER -->
+    <div id="pinned-banner" class="hidden bg-emerald-100 dark:bg-slate-800 text-emerald-900 dark:text-emerald-100 px-3 py-1.5 flex justify-between items-center text-xs border-b border-emerald-300">
+        <div class="flex items-center gap-2 truncate">
+            <i data-lucide="pin" class="w-3.5 h-3.5 text-emerald-600"></i>
+            <span id="pinned-text" class="truncate font-medium">Pinned Message</span>
+        </div>
+        <button onclick="unpinMessage()" class="text-gray-500 hover:text-black"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
+    </div>
+
+    <!-- MAIN HEADER -->
+    <header id="header-bar" class="app-header bg-[#075e54] text-white p-3 flex justify-between items-center shadow-md transition-colors">
+        <div class="flex items-center gap-3">
+            <img id="my-avatar" src="https://cdn-icons-png.flaticon.com/512/149/149071.png" class="w-10 h-10 rounded-full object-cover border-2 border-white/20">
             <div>
-                <h1 id="chat-partner-name" class="font-bold text-base tracking-wide">WhatsApp Partner</h1>
+                <h1 id="chat-partner-name" class="font-bold text-base tracking-wide">WhatsApp User</h1>
                 <p id="partner-status" class="text-xs text-emerald-100 font-medium">Connecting...</p>
             </div>
         </div>
-        <div class="flex items-center gap-3 text-emerald-100">
-            <button onclick="toggleDarkMode()" class="p-1.5 hover:bg-white/10 rounded-full" title="Toggle Dark Mode">
+        <div class="flex items-center gap-2 text-emerald-100">
+            <button onclick="toggleSearch()" class="p-1.5 hover:bg-white/10 rounded-full" title="Search Chat">
+                <i data-lucide="search" class="w-5 h-5"></i>
+            </button>
+            <button onclick="toggleDarkMode()" class="p-1.5 hover:bg-white/10 rounded-full" title="Dark Mode">
                 <i data-lucide="moon" class="w-5 h-5"></i>
             </button>
             <div class="relative">
                 <button onclick="toggleMenu()" class="p-1.5 hover:bg-white/10 rounded-full" title="Menu">
                     <i data-lucide="more-vertical" class="w-5 h-5"></i>
                 </button>
-                <!-- 3-DOT MENU DROPDOWN -->
-                <div id="dropdown-menu" class="hidden absolute right-0 mt-2 w-48 bg-white text-gray-800 rounded-xl shadow-xl z-30 py-1 text-sm border border-gray-100">
-                    <button onclick="showSecretInfo()" class="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center gap-2">
-                        <i data-lucide="info" class="w-4 h-4"></i> Secret Partner Info
+                <!-- 3-DOT MENU -->
+                <div id="dropdown-menu" class="hidden absolute right-0 mt-2 w-52 bg-white text-gray-800 rounded-xl shadow-xl z-30 py-1 text-sm border border-gray-100">
+                    <button onclick="editProfile()" class="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center gap-2">
+                        <i data-lucide="user-check" class="w-4 h-4"></i> Edit Profile & Avatar
                     </button>
-                    <button onclick="openSharedMedia()" class="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center gap-2">
-                        <i data-lucide="image" class="w-4 h-4"></i> Shared Media Gallery
+                    <button onclick="changeWallpaper()" class="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center gap-2">
+                        <i data-lucide="image" class="w-4 h-4"></i> Change Chat Wallpaper
                     </button>
-                    <button onclick="setupAppLock()" class="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center gap-2">
-                        <i data-lucide="lock" class="w-4 h-4"></i> Set PIN Lock
+                    <button onclick="toggleDarkMode()" class="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center gap-2">
+                        <i data-lucide="sun" class="w-4 h-4"></i> Switch Theme
                     </button>
-                    <button onclick="clearChat()" class="w-full text-left px-4 py-2 hover:bg-gray-100 text-red-600 flex items-center gap-2">
-                        <i data-lucide="trash-2" class="w-4 h-4"></i> Clear Chat History
+                    <button onclick="clearMyChat()" class="w-full text-left px-4 py-2 hover:bg-gray-100 text-red-600 flex items-center gap-2">
+                        <i data-lucide="trash" class="w-4 h-4"></i> Clear My Chat History
+                    </button>
+                    <button onclick="purgeServerData()" class="w-full text-left px-4 py-2 hover:bg-gray-100 text-red-700 font-bold flex items-center gap-2 border-t">
+                        <i data-lucide="alert-triangle" class="w-4 h-4"></i> Purge All Server Messages
                     </button>
                 </div>
             </div>
         </div>
     </header>
 
-    <!-- CHAT MESSAGES CONTAINER -->
-    <main id="chat-window" class="chat-area flex-1 overflow-y-auto p-4 space-y-3 bg-[#efeae2] transition-colors duration-300">
-        <!-- Messages render dynamically -->
+    <!-- CHAT CONTAINER -->
+    <main id="chat-window" class="chat-area flex-1 overflow-y-auto p-4 space-y-3 bg-[#efeae2] bg-cover bg-center transition-colors">
+        <!-- Messages loaded dynamically -->
     </main>
 
-    <!-- REPLIED MESSAGE PREVIEW BAR -->
-    <div id="reply-preview-bar" class="hidden bg-gray-300 p-2 border-l-4 border-[#00a884] flex justify-between items-center text-xs text-gray-700 mx-2 rounded-t-lg">
+    <!-- REPLIED PREVIEW BAR -->
+    <div id="reply-preview-bar" class="hidden bg-gray-300 dark:bg-slate-700 p-2 border-l-4 border-[#00a884] flex justify-between items-center text-xs text-gray-800 dark:text-gray-100 mx-2 rounded-t-lg">
         <div class="truncate">
             <span class="font-bold text-[#00a884]" id="reply-user-tag">Replying to:</span>
             <p id="reply-text-preview" class="truncate"></p>
         </div>
-        <button onclick="cancelReply()" class="text-gray-500 hover:text-black p-1">
-            <i data-lucide="x" class="w-4 h-4"></i>
-        </button>
+        <button onclick="cancelReply()" class="p-1"><i data-lucide="x" class="w-4 h-4"></i></button>
     </div>
 
-    <!-- CONTROLS & PARAGRAPH INPUT BAR -->
-    <footer id="control-bar" class="footer-bar bg-[#f0f2f5] p-3 flex items-end gap-2 border-t border-gray-300 shadow-lg transition-colors">
-        <button onclick="document.getElementById('file-input').click()" class="text-gray-600 p-2.5 hover:bg-gray-200 rounded-full transition-colors mb-0.5" title="Attach Media">
+    <!-- CONTROLS & INPUT -->
+    <footer id="control-bar" class="footer-bar bg-[#f0f2f5] p-3 flex items-end gap-2 border-t border-gray-300 shadow-lg">
+        <button onclick="document.getElementById('file-input').click()" class="text-gray-600 p-2.5 hover:bg-gray-200 rounded-full mb-0.5" title="Send Media">
             <i data-lucide="paperclip" class="w-5 h-5"></i>
         </button>
-        <input type="file" id="file-input" accept="image/*,video/*" class="hidden" onchange="handleMediaUpload(event)">
+        <input type="file" id="file-input" accept="image/*,video/*,audio/*" class="hidden" onchange="handleMediaUpload(event)">
 
-        <!-- Voice Recording Button -->
-        <button id="mic-btn" onclick="toggleVoiceRecording()" class="text-gray-600 p-2.5 hover:bg-gray-200 rounded-full transition-colors mb-0.5" title="Voice Note">
+        <button id="mic-btn" onclick="toggleVoiceRecording()" class="text-gray-600 p-2.5 hover:bg-gray-200 rounded-full mb-0.5" title="Voice Note">
             <i data-lucide="mic" class="w-5 h-5"></i>
         </button>
 
-        <!-- Paragraph Multiline Input -->
         <textarea id="msg-input" oninput="handleTyping()" placeholder="Type a message..." rows="1" class="input-box flex-1 bg-white border border-gray-300 px-4 py-2.5 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#00a884] shadow-sm transition-all resize-none max-h-32 text-gray-800"></textarea>
         
-        <button onclick="sendMessage()" class="bg-[#00a884] text-white p-2.5 rounded-full hover:bg-emerald-700 shadow-md transition-transform active:scale-95 flex items-center justify-center mb-0.5">
+        <button onclick="sendMessage()" class="bg-[#00a884] text-white p-2.5 rounded-full hover:bg-emerald-700 shadow-md active:scale-95 flex items-center justify-center mb-0.5">
             <i data-lucide="send" class="w-5 h-5"></i>
         </button>
     </footer>
-
-    <!-- CONTEXT MENU / LONG-PRESS POPUP MODAL -->
-    <div id="context-modal" class="hidden fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl shadow-2xl p-4 w-full max-w-xs space-y-3 border border-gray-100">
-            <h3 class="font-bold text-gray-800 text-sm border-b pb-2">Message Options</h3>
-            <button id="opt-edit" onclick="startEditMsg()" class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg flex items-center gap-2">
-                <i data-lucide="edit-3" class="w-4 h-4"></i> Edit Message (Within 30m)
-            </button>
-            <button onclick="execDelete('me')" class="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg flex items-center gap-2">
-                <i data-lucide="trash" class="w-4 h-4"></i> Delete for Me
-            </button>
-            <button id="opt-everyone" onclick="execDelete('everyone')" class="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg flex items-center gap-2">
-                <i data-lucide="users" class="w-4 h-4"></i> Delete for Everyone
-            </button>
-            <button onclick="closeContextModal()" class="w-full text-center py-2 text-xs font-bold text-gray-500 border-t mt-2">Cancel</button>
-        </div>
-    </div>
-
-    <!-- SHARED MEDIA GALLERY MODAL -->
-    <div id="gallery-modal" class="hidden fixed inset-0 z-50 bg-black/90 flex flex-col p-4 text-white">
-        <div class="flex justify-between items-center mb-4">
-            <h2 class="font-bold text-lg">Shared Media & Documents</h2>
-            <button onclick="closeGallery()" class="p-2"><i data-lucide="x" class="w-6 h-6"></i></button>
-        </div>
-        <div id="gallery-grid" class="flex-1 overflow-y-auto grid grid-cols-3 gap-2"></div>
-    </div>
 
     <script>
         lucide.createIcons();
 
         const BIN_ID = "6addf3a8ffd5d160538a58e6";
         const API_KEY = "$2a$10$pI4R3W9UsoJ4ybW78fotNugUrCJDiysHmy/Spjr4rEhGcq4E7mHve";
+        const IMGBB_API_KEY = "3b3b4f65c92e3cf14a1a682855f75607"; 
 
         let myUser = localStorage.getItem('chat_user') || 'User_' + Math.floor(Math.random() * 9000 + 1000);
-        localStorage.setItem('chat_user', myUser);
+        let myAvatar = localStorage.getItem('chat_avatar') || 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
+        let savedWallpaper = localStorage.getItem('chat_wallpaper') || '';
 
-        let selectedMsgId = null;
+        localStorage.setItem('chat_user', myUser);
+        document.getElementById('my-avatar').src = myAvatar;
+        
+        if (savedWallpaper) {
+            document.getElementById('chat-window').style.backgroundImage = `url('${savedWallpaper}')`;
+        }
+
+        let selectedMsgIds = [];
+        let activeReactionMsgId = null;
         let replyingToMsg = null;
         let isTypingTimeout = null;
         let mediaRecorder = null;
         let audioChunks = [];
         let isRecording = false;
+        let lastMsgCount = 0;
 
-        // Load PIN Lock state
-        if (localStorage.getItem('chat_pin')) {
-            document.getElementById('pin-lock-screen').classList.remove('hidden');
-        }
+        // Notification sound
+        const msgSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3');
 
         loadChats();
-        setInterval(loadChats, 3500);
-
-        function unlockApp() {
-            const input = document.getElementById('pin-input').value;
-            if (input === localStorage.getItem('chat_pin')) {
-                document.getElementById('pin-lock-screen').classList.add('hidden');
-            } else {
-                alert("Incorrect PIN!");
-            }
-        }
-
-        function setupAppLock() {
-            const pin = prompt("Enter 4-digit PIN to lock chat (or leave empty to remove):");
-            if (pin && pin.length === 4) {
-                localStorage.setItem('chat_pin', pin);
-                alert("PIN Lock Enabled!");
-            } else if (!pin) {
-                localStorage.removeItem('chat_pin');
-                alert("PIN Lock Removed!");
-            } else {
-                alert("PIN must be exactly 4 digits.");
-            }
-        }
+        setInterval(loadChats, 3000);
 
         function toggleDarkMode() {
             document.body.classList.toggle('dark-mode');
@@ -223,6 +211,45 @@
 
         function toggleMenu() {
             document.getElementById('dropdown-menu').classList.toggle('hidden');
+        }
+
+        function toggleSearch() {
+            const sb = document.getElementById('search-bar');
+            sb.classList.toggle('hidden');
+            if (!sb.classList.contains('hidden')) {
+                document.getElementById('search-input').focus();
+            } else {
+                document.getElementById('search-input').value = '';
+                loadChats();
+            }
+        }
+
+        function changeWallpaper() {
+            toggleMenu();
+            const url = prompt("Enter Wallpaper Image URL (or leave blank to reset):");
+            if (url) {
+                localStorage.setItem('chat_wallpaper', url);
+                document.getElementById('chat-window').style.backgroundImage = `url('${url}')`;
+            } else {
+                localStorage.removeItem('chat_wallpaper');
+                document.getElementById('chat-window').style.backgroundImage = '';
+            }
+        }
+
+        function editProfile() {
+            toggleMenu();
+            const newName = prompt("Enter new Username:", myUser);
+            const newAvt = prompt("Enter Profile Image URL (or leave blank):", myAvatar);
+            if (newName) {
+                myUser = newName;
+                localStorage.setItem('chat_user', myUser);
+            }
+            if (newAvt) {
+                myAvatar = newAvt;
+                localStorage.setItem('chat_avatar', myAvatar);
+                document.getElementById('my-avatar').src = myAvatar;
+            }
+            loadChats();
         }
 
         async function loadChats() {
@@ -235,63 +262,80 @@
                 const record = data.record || {};
                 const messages = record.messages || [];
                 const presence = record.presence || {};
+                const pinned = record.pinnedMsg || null;
+
+                if (messages.length > lastMsgCount && lastMsgCount !== 0) {
+                    const lastM = messages[messages.length - 1];
+                    if (lastM.sender !== myUser) msgSound.play().catch(()=>{});
+                }
+                lastMsgCount = messages.length;
 
                 updatePresenceState(presence);
+                updatePinnedState(pinned);
                 renderUI(messages);
-                markAsReadIfNeeded(messages);
-            } catch (err) {
-                console.error("Sync error");
+                markAsRead(messages);
+            } catch (err) {}
+        }
+
+        function updatePinnedState(pinned) {
+            const banner = document.getElementById('pinned-banner');
+            if (pinned && pinned.text) {
+                document.getElementById('pinned-text').innerText = `${pinned.sender}: ${pinned.text}`;
+                banner.classList.remove('hidden');
+            } else {
+                banner.classList.add('hidden');
             }
         }
 
-        async function updatePresenceState(presence) {
+        async function unpinMessage() {
+            try {
+                const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, { headers: { 'X-Master-Key': API_KEY } });
+                const data = await res.json();
+                await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'X-Master-Key': API_KEY },
+                    body: JSON.stringify({ ...data.record, pinnedMsg: null })
+                });
+                loadChats();
+            } catch (e) {}
+        }
+
+        function updatePresenceState(presence) {
             const partnerName = Object.keys(presence).find(u => u !== myUser);
             const partnerTag = document.getElementById('chat-partner-name');
             const partnerStatus = document.getElementById('partner-status');
-            const dot = document.getElementById('online-indicator');
 
             if (partnerName) {
                 partnerTag.innerText = partnerName;
                 const pData = presence[partnerName];
-                const now = Date.now();
-                const isOnline = (now - pData.lastSeen) < 10000;
+                const isOnline = (Date.now() - pData.lastSeen) < 10000;
 
                 if (pData.typing) {
                     partnerStatus.innerText = "Typing...";
                     partnerStatus.className = "text-xs text-yellow-200 font-bold animate-pulse";
-                    dot.className = "w-3 h-3 bg-yellow-400 border-2 border-white rounded-full absolute bottom-0 right-0";
                 } else if (isOnline) {
                     partnerStatus.innerText = "Online";
                     partnerStatus.className = "text-xs text-emerald-200 font-medium";
-                    dot.className = "w-3 h-3 bg-emerald-500 border-2 border-white rounded-full absolute bottom-0 right-0";
                 } else {
                     const timeStr = new Date(pData.lastSeen).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                     partnerStatus.innerText = `Last seen at ${timeStr}`;
                     partnerStatus.className = "text-xs text-gray-300 font-medium";
-                    dot.className = "w-3 h-3 bg-gray-400 border-2 border-white rounded-full absolute bottom-0 right-0";
                 }
             } else {
-                partnerTag.innerText = "WhatsApp Partner";
-                partnerStatus.innerText = "Waiting for partner...";
+                partnerTag.innerText = "WhatsApp User";
+                partnerStatus.innerText = "Online";
             }
-
-            // Ping own presence
             updateSelfPresence(false);
         }
 
         async function updateSelfPresence(isTyping) {
             try {
-                const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
-                    headers: { 'X-Master-Key': API_KEY }
-                });
+                const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, { headers: { 'X-Master-Key': API_KEY } });
                 const data = await res.json();
                 const record = data.record || {};
                 const presence = record.presence || {};
 
-                presence[myUser] = {
-                    lastSeen: Date.now(),
-                    typing: isTyping
-                };
+                presence[myUser] = { lastSeen: Date.now(), typing: isTyping };
 
                 await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
                     method: 'PUT',
@@ -304,9 +348,26 @@
         function handleTyping() {
             clearTimeout(isTypingTimeout);
             updateSelfPresence(true);
-            isTypingTimeout = setTimeout(() => {
-                updateSelfPresence(false);
-            }, 3000);
+            isTypingTimeout = setTimeout(() => updateSelfPresence(false), 3000);
+        }
+
+        function parseTextWithLinks(text) {
+            const urlRegex = /(https?:\/\/[^\s]+)/g;
+            return text.replace(urlRegex, function(url) {
+                return `<a href="${url}" target="_blank" class="text-blue-600 dark:text-blue-400 underline break-all">${url}</a>`;
+            });
+        }
+
+        function filterMessages() {
+            const query = document.getElementById('search-input').value.toLowerCase();
+            const bubbles = document.querySelectorAll('.msg-bubble');
+            bubbles.forEach(b => {
+                if (b.innerText.toLowerCase().includes(query)) {
+                    b.parentElement.style.display = 'flex';
+                } else {
+                    b.parentElement.style.display = 'none';
+                }
+            });
         }
 
         function renderUI(messages) {
@@ -318,6 +379,8 @@
                 if (m.deletedFor && m.deletedFor.includes(myUser)) return;
 
                 const isMe = m.sender === myUser;
+                const isSelected = selectedMsgIds.includes(m.id);
+
                 const box = document.createElement('div');
                 box.className = `flex flex-col ${isMe ? 'items-end' : 'items-start'} my-1`;
 
@@ -329,18 +392,17 @@
                         contentHTML += `<div class="bg-black/10 p-1.5 rounded-lg border-l-2 border-emerald-600 mb-1 text-xs opacity-80"><span class="font-bold block">${m.replyTo.sender}</span>${m.replyTo.text}</div>`;
                     }
                     if (m.text) {
-                        contentHTML += `<p class="break-words whitespace-pre-wrap leading-relaxed">${m.text}</p>`;
+                        contentHTML += `<p class="break-words whitespace-pre-wrap leading-relaxed">${parseTextWithLinks(m.text)}</p>`;
                     }
                     if (m.mediaType === 'image') {
-                        contentHTML += `<img src="${m.media}" class="rounded-lg max-w-xs max-h-52 object-cover my-1 cursor-pointer shadow-sm" onclick="openMediaViewer('${m.media}', 'image')">`;
+                        contentHTML += `<img src="${m.media}" class="rounded-lg max-w-xs max-h-60 object-cover my-1 cursor-pointer shadow-sm" onclick="openMediaViewer('${m.media}', 'image')">`;
                     } else if (m.mediaType === 'video') {
-                        contentHTML += `<video src="${m.media}" controls class="rounded-lg max-w-xs max-h-52 my-1 shadow-sm"></video>`;
+                        contentHTML += `<video src="${m.media}" controls class="rounded-lg max-w-xs max-h-60 my-1 shadow-sm"></video>`;
                     } else if (m.mediaType === 'audio') {
                         contentHTML += `<audio src="${m.media}" controls class="my-1 max-w-xs"></audio>`;
                     }
                 }
 
-                // Ticks system
                 let tickHTML = '';
                 if (isMe && !m.deletedEveryone) {
                     if (m.readBy && m.readBy.length > 1) {
@@ -352,7 +414,6 @@
                     }
                 }
 
-                // Reactions
                 let reactionsHTML = '';
                 if (m.reactions && Object.keys(m.reactions).length > 0) {
                     reactionsHTML = `<div class="flex gap-1 -mt-2 mb-1 bg-white dark:bg-slate-800 shadow-md px-2 py-0.5 rounded-full text-xs border">`;
@@ -366,9 +427,9 @@
 
                 box.innerHTML = `
                     <div id="msg-${m.id}" 
-                         ondblclick="showReactionPicker('${m.id}')"
-                         oncontextmenu="openContextMenu(event, '${m.id}', '${m.sender}', ${m.timestamp || 0})"
-                         class="${isMe ? 'msg-me bg-[#d9fdd3] text-gray-900' : 'msg-other bg-white text-gray-900'} px-3 py-2 rounded-2xl shadow-sm max-w-xs md:max-w-md text-sm relative group transition-all">
+                         onclick="handleMsgClick('${m.id}')"
+                         ondblclick="openReactionPopup(event, '${m.id}')"
+                         class="msg-bubble ${isSelected ? 'ring-2 ring-emerald-500' : ''} ${isMe ? 'msg-me bg-[#d9fdd3] text-gray-900' : 'msg-other bg-white text-gray-900'} px-3 py-2 rounded-2xl shadow-sm max-w-xs md:max-w-md text-sm relative group">
                         <div class="flex justify-between items-center gap-2 mb-0.5">
                             <span class="text-[10px] font-bold opacity-60">${m.sender}</span>
                             <button onclick="setReply('${m.id}', '${m.sender}', '${(m.text || 'Media').replace(/'/g, "\\'")}')" class="opacity-0 group-hover:opacity-100 text-[10px] text-gray-500 hover:underline">Reply</button>
@@ -384,6 +445,18 @@
                     </div>
                     ${reactionsHTML}
                 `;
+
+                // Swipe Right Event Listener for Reply
+                const bubble = box.querySelector('.msg-bubble');
+                let touchStartX = 0;
+                bubble.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; });
+                bubble.addEventListener('touchend', e => {
+                    let touchEndX = e.changedTouches[0].clientX;
+                    if (touchEndX - touchStartX > 60) {
+                        setReply(m.id, m.sender, m.text || 'Media');
+                    }
+                });
+
                 win.appendChild(box);
             });
 
@@ -391,7 +464,141 @@
             if (isAtBottom) win.scrollTop = win.scrollHeight;
         }
 
-        async function markAsReadIfNeeded(messages) {
+        function handleMsgClick(id) {
+            toggleSelect(id);
+        }
+
+        function toggleSelect(id) {
+            if (selectedMsgIds.includes(id)) {
+                selectedMsgIds = selectedMsgIds.filter(i => i !== id);
+            } else {
+                selectedMsgIds.push(id);
+            }
+
+            if (selectedMsgIds.length > 0) {
+                document.getElementById('selection-bar').classList.remove('hidden');
+                document.getElementById('select-count').innerText = `${selectedMsgIds.length} Selected`;
+            } else {
+                document.getElementById('selection-bar').classList.add('hidden');
+            }
+            loadChats();
+        }
+
+        function cancelSelection() {
+            selectedMsgIds = [];
+            document.getElementById('selection-bar').classList.add('hidden');
+            loadChats();
+        }
+
+        function copySelectedText() {
+            const bubbles = selectedMsgIds.map(id => {
+                const el = document.querySelector(`#msg-${id} p`);
+                return el ? el.innerText : '';
+            }).filter(Boolean);
+
+            if (bubbles.length > 0) {
+                navigator.clipboard.writeText(bubbles.join('\n'));
+                alert("Text copied to clipboard!");
+            }
+            cancelSelection();
+        }
+
+        async function pinSelectedMessage() {
+            if (selectedMsgIds.length === 0) return;
+            const lastId = selectedMsgIds[selectedMsgIds.length - 1];
+
+            try {
+                const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, { headers: { 'X-Master-Key': API_KEY } });
+                const data = await res.json();
+                const record = data.record || {};
+                const list = record.messages || [];
+                const targetMsg = list.find(m => m.id === lastId);
+
+                if (targetMsg) {
+                    await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json', 'X-Master-Key': API_KEY },
+                        body: JSON.stringify({ ...record, pinnedMsg: { sender: targetMsg.sender, text: targetMsg.text || 'Media' } })
+                    });
+                }
+            } catch (e) {}
+            cancelSelection();
+            loadChats();
+        }
+
+        async function deleteSelected(type) {
+            try {
+                const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, { headers: { 'X-Master-Key': API_KEY } });
+                const data = await res.json();
+                const record = data.record || {};
+                let messages = record.messages || [];
+
+                messages = messages.map(m => {
+                    if (selectedMsgIds.includes(m.id)) {
+                        if (type === 'me') {
+                            m.deletedFor = m.deletedFor || [];
+                            if (!m.deletedFor.includes(myUser)) m.deletedFor.push(myUser);
+                        } else if (type === 'everyone') {
+                            m.deletedEveryone = true;
+                            m.text = "";
+                            m.media = "";
+                        }
+                    }
+                    return m;
+                });
+
+                await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'X-Master-Key': API_KEY },
+                    body: JSON.stringify({ ...record, messages })
+                });
+
+                cancelSelection();
+            } catch (e) {}
+        }
+
+        function openReactionPopup(e, id) {
+            activeReactionMsgId = id;
+            const bar = document.getElementById('reaction-bar');
+            bar.style.top = (e.clientY - 50) + 'px';
+            bar.style.left = Math.min(e.clientX, window.innerWidth - 200) + 'px';
+            bar.classList.remove('hidden');
+        }
+
+        async function applyReaction(emoji) {
+            document.getElementById('reaction-bar').classList.add('hidden');
+            if (!activeReactionMsgId) return;
+
+            try {
+                const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, { headers: { 'X-Master-Key': API_KEY } });
+                const data = await res.json();
+                const record = data.record || {};
+                let messages = record.messages || [];
+
+                messages = messages.map(m => {
+                    if (m.id === activeReactionMsgId) {
+                        m.reactions = m.reactions || {};
+                        m.reactions[myUser] = emoji;
+                    }
+                    return m;
+                });
+
+                await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'X-Master-Key': API_KEY },
+                    body: JSON.stringify({ ...record, messages })
+                });
+
+                loadChats();
+            } catch (e) {}
+        }
+
+        function customReactionPrompt() {
+            const e = prompt("Type custom emoji reaction:");
+            if (e) applyReaction(e);
+        }
+
+        async function markAsRead(messages) {
             let updated = false;
             messages.forEach(m => {
                 m.readBy = m.readBy || [];
@@ -404,9 +611,7 @@
 
             if (updated) {
                 try {
-                    const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
-                        headers: { 'X-Master-Key': API_KEY }
-                    });
+                    const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, { headers: { 'X-Master-Key': API_KEY } });
                     const data = await res.json();
                     await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
                         method: 'PUT',
@@ -425,9 +630,7 @@
             if (!textVal) input.value = '';
 
             try {
-                const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
-                    headers: { 'X-Master-Key': API_KEY }
-                });
+                const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, { headers: { 'X-Master-Key': API_KEY } });
                 const data = await res.json();
                 const record = data.record || {};
                 const list = record.messages || [];
@@ -473,24 +676,31 @@
             document.getElementById('reply-preview-bar').classList.add('hidden');
         }
 
-        function handleMediaUpload(event) {
+        async function handleMediaUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
 
-            if (file.size > 3 * 1024 * 1024) {
-                alert("File size limit is 3MB.");
-                return;
-            }
+            const formData = new FormData();
+            formData.append('image', file);
 
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const type = file.type.startsWith('video') ? 'video' : 'image';
-                sendMessage('', e.target.result, type);
-            };
-            reader.readAsDataURL(file);
+            try {
+                const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+                if (data.success) {
+                    const mediaUrl = data.data.url;
+                    const type = file.type.startsWith('video') ? 'video' : 'image';
+                    sendMessage('', mediaUrl, type);
+                } else {
+                    alert("Media upload failed.");
+                }
+            } catch (e) {
+                alert("Media upload error.");
+            }
         }
 
-        // Voice Recording Toggle
         async function toggleVoiceRecording() {
             const btn = document.getElementById('mic-btn');
             if (!isRecording) {
@@ -499,17 +709,19 @@
                     mediaRecorder = new MediaRecorder(stream);
                     audioChunks = [];
                     mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-                    mediaRecorder.onstop = () => {
+                    mediaRecorder.onstop = async () => {
                         const blob = new Blob(audioChunks, { type: 'audio/mp3' });
-                        const reader = new FileReader();
-                        reader.onload = e => sendMessage('', e.target.result, 'audio');
-                        reader.readAsDataURL(blob);
+                        const formData = new FormData();
+                        formData.append('image', blob);
+                        const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, { method: 'POST', body: formData });
+                        const data = await res.json();
+                        if (data.success) sendMessage('', data.data.url, 'audio');
                     };
                     mediaRecorder.start();
                     isRecording = true;
                     btn.classList.add('text-red-500', 'animate-pulse');
                 } catch (e) {
-                    alert("Microphone access required!");
+                    alert("Microphone permission required.");
                 }
             } else {
                 mediaRecorder.stop();
@@ -518,118 +730,6 @@
             }
         }
 
-        function openContextMenu(e, id, sender, timestamp) {
-            e.preventDefault();
-            selectedMsgId = id;
-            const isMe = sender === myUser;
-            const within30m = (Date.now() - timestamp) < (30 * 60 * 1000);
-
-            document.getElementById('opt-edit').style.display = (isMe && within30m) ? 'block' : 'none';
-            document.getElementById('opt-everyone').style.display = isMe ? 'block' : 'none';
-            document.getElementById('context-modal').classList.remove('hidden');
-        }
-
-        function closeContextModal() {
-            document.getElementById('context-modal').classList.add('hidden');
-        }
-
-        async function execDelete(type) {
-            closeContextModal();
-            try {
-                const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
-                    headers: { 'X-Master-Key': API_KEY }
-                });
-                const data = await res.json();
-                const record = data.record || {};
-                let messages = record.messages || [];
-
-                messages = messages.map(m => {
-                    if (m.id === selectedMsgId) {
-                        if (type === 'me') {
-                            m.deletedFor = m.deletedFor || [];
-                            if (!m.deletedFor.includes(myUser)) m.deletedFor.push(myUser);
-                        } else if (type === 'everyone') {
-                            m.deletedEveryone = true;
-                            m.text = "";
-                            m.media = "";
-                        }
-                    }
-                    return m;
-                });
-
-                await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json', 'X-Master-Key': API_KEY },
-                    body: JSON.stringify({ ...record, messages })
-                });
-
-                loadChats();
-            } catch (e) {}
-        }
-
-        async function startEditMsg() {
-            closeContextModal();
-            const newText = prompt("Edit your message (Max 30 min limit):");
-            if (!newText) return;
-
-            try {
-                const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
-                    headers: { 'X-Master-Key': API_KEY }
-                });
-                const data = await res.json();
-                const record = data.record || {};
-                let messages = record.messages || [];
-
-                messages = messages.map(m => {
-                    if (m.id === selectedMsgId) {
-                        m.text = newText;
-                        m.edited = true;
-                    }
-                    return m;
-                });
-
-                await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json', 'X-Master-Key': API_KEY },
-                    body: JSON.stringify({ ...record, messages })
-                });
-
-                loadChats();
-            } catch (e) {}
-        }
-
-        // Reaction Picker
-        async function showReactionPicker(msgId) {
-            const emoji = prompt("Pick Reaction (❤️, 😂, 😮, 😢, 🙏, 👍 or type any custom emoji):");
-            if (!emoji) return;
-
-            try {
-                const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
-                    headers: { 'X-Master-Key': API_KEY }
-                });
-                const data = await res.json();
-                const record = data.record || {};
-                let messages = record.messages || [];
-
-                messages = messages.map(m => {
-                    if (m.id === msgId) {
-                        m.reactions = m.reactions || {};
-                        m.reactions[myUser] = emoji;
-                    }
-                    return m;
-                });
-
-                await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json', 'X-Master-Key': API_KEY },
-                    body: JSON.stringify({ ...record, messages })
-                });
-
-                loadChats();
-            } catch (e) {}
-        }
-
-        // Media Viewer Zoom
         function openMediaViewer(url, type) {
             const modal = document.getElementById('media-viewer');
             const img = document.getElementById('viewer-img');
@@ -653,55 +753,43 @@
             document.getElementById('media-viewer').classList.add('hidden');
         }
 
-        // Shared Media Gallery
-        async function openSharedMedia() {
+        async function clearMyChat() {
             toggleMenu();
-            const grid = document.getElementById('gallery-grid');
-            grid.innerHTML = 'Loading...';
-            document.getElementById('gallery-modal').classList.remove('hidden');
+            if (!confirm("Clear your chat history?")) return;
 
             try {
-                const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
-                    headers: { 'X-Master-Key': API_KEY }
-                });
+                const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, { headers: { 'X-Master-Key': API_KEY } });
                 const data = await res.json();
-                const list = data.record.messages || [];
-                grid.innerHTML = '';
+                const record = data.record || {};
+                let messages = record.messages || [];
 
-                list.forEach(m => {
-                    if (m.media) {
-                        if (m.mediaType === 'image') {
-                            grid.innerHTML += `<img src="${m.media}" class="w-full h-24 object-cover rounded cursor-pointer" onclick="openMediaViewer('${m.media}', 'image')">`;
-                        } else if (m.mediaType === 'video') {
-                            grid.innerHTML += `<video src="${m.media}" class="w-full h-24 object-cover rounded cursor-pointer" onclick="openMediaViewer('${m.media}', 'video')"></video>`;
-                        }
-                    }
+                messages = messages.map(m => {
+                    m.deletedFor = m.deletedFor || [];
+                    if (!m.deletedFor.includes(myUser)) m.deletedFor.push(myUser);
+                    return m;
                 });
+
+                await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'X-Master-Key': API_KEY },
+                    body: JSON.stringify({ ...record, messages })
+                });
+
+                loadChats();
             } catch (e) {}
         }
 
-        function closeGallery() {
-            document.getElementById('gallery-modal').classList.add('hidden');
-        }
-
-        function showSecretInfo() {
+        async function purgeServerData() {
             toggleMenu();
-            alert(`Your ID: ${myUser}\nConnected Database BIN: ${BIN_ID}`);
-        }
-
-        async function clearChat() {
-            toggleMenu();
-            if (!confirm("Are you sure you want to clear all chats for everyone?")) return;
+            if (!confirm("WARNING: This will permanently wipe all chat messages for both users from the server! Proceed?")) return;
 
             try {
-                const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
-                    headers: { 'X-Master-Key': API_KEY }
-                });
+                const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, { headers: { 'X-Master-Key': API_KEY } });
                 const data = await res.json();
                 await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json', 'X-Master-Key': API_KEY },
-                    body: JSON.stringify({ ...data.record, messages: [] })
+                    body: JSON.stringify({ ...data.record, messages: [], pinnedMsg: null })
                 });
                 loadChats();
             } catch (e) {}
